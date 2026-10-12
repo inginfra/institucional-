@@ -1,0 +1,3 @@
+# Copiá este archivo como .dev.vars y editá el valor. .dev.vars está en .gitignore.
+# Solo se usa en la vista previa local (npm start).
+ADMIN_PASSWORD=cambiame-por-una-clave-de-prueba

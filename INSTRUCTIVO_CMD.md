@@ -1,19 +1,16 @@
 # Instructivo: vista previa local desde CMD (Windows)
 
-Esta guía te permite ejecutar el Observatorio **en tu propia computadora** y probarlo en el navegador.
+Esta guía te permite ejecutar el Observatorio **en tu computadora** y probarlo en el navegador.
 
-> **Vista previa local ≠ versión publicada.**
-> Todo lo que hagas acá corre solo en tu PC (`localhost`), usa su propia carpeta `data\` y **no toca ninguna versión publicada**. Cuando cierres la ventana de CMD, el servidor se detiene. No depende de ningún servidor ejecutándose en otro lado.
-
-Reemplazá `<TU_USUARIO>` y `<TU_REPO>` por los datos reales de tu repositorio de GitHub cuando lo hayas publicado.
+> **Vista previa local ≠ versión publicada en Cloudflare.**
+> Los comandos de las secciones 1 a 10 usan siempre el modo `--local`: levantan una copia del sitio con una base de datos simulada en tu PC (carpeta `.wrangler\`). **No se conectan a Cloudflare, no usan tu cuenta y no modifican la versión de producción.** Al cerrar CMD, el sitio local deja de funcionar. No depende de ningún servidor ejecutándose en otro lado.
+> Los comandos que sí afectan producción están únicamente en la sección 11 y están marcados con ⚠.
 
 ---
 
 ## 1. Requisitos previos
 
-Necesitás:
-
-- **Node.js 18 o superior** (recomendado: versión LTS actual). Descarga: https://nodejs.org
+- **Node.js 22 o superior** (versión LTS). Descarga: https://nodejs.org
 - **Git para Windows**. Descarga: https://git-scm.com/download/win
 
 Abrí **CMD** (tecla Windows, escribí `cmd`, Enter) y verificá:
@@ -24,34 +21,29 @@ npm --version
 git --version
 ```
 
-Tiene que mostrar números de versión. El de Node debe ser `v18.x` o mayor. Si algún comando dice que "no se reconoce", andá a la sección 10.
+Node debe mostrar `v22.x` o mayor. Si algún comando no se reconoce, andá a la sección 10.
 
 ## 2. Clonar el repositorio
 
 ```bat
 cd %USERPROFILE%\Documents
-git clone https://github.com/<TU_USUARIO>/<TU_REPO>.git
+git clone https://github.com/inginfra/institucional-ofca.git
 ```
 
-Si el repositorio es privado, Git te va a pedir que inicies sesión en GitHub la primera vez.
+Si el repositorio es privado, Git te pedirá iniciar sesión en GitHub la primera vez.
 
 ## 3. Entrar en la carpeta del proyecto
 
 ```bat
-cd <TU_REPO>
+cd institucional-ofca
+dir wrangler.toml
 ```
 
-El proyecto está en la raíz del repositorio. Si en tu repositorio quedó dentro de una subcarpeta `observatorio`, entrá también en ella (`cd observatorio`). Comprobalo con:
-
-```bat
-dir server.js
-```
-
-Si lista el archivo, estás en el lugar correcto.
+Si `dir` muestra el archivo `wrangler.toml`, estás en el lugar correcto.
 
 ## 4. Instalar dependencias
 
-Este proyecto **no tiene dependencias externas**: usa solo Node.js. No hace falta `npm install`. Si lo ejecutás, no instala nada y no da error:
+El proyecto usa Wrangler (la herramienta de Cloudflare) para simular Workers y D1 en tu PC:
 
 ```bat
 npm install
@@ -59,26 +51,16 @@ npm install
 
 ## 5. Configurar el entorno
 
-El servidor lee estas variables (todas opcionales):
-
-| Variable | Para qué sirve | Valor por defecto |
-|---|---|---|
-| `ADMIN_PASSWORD` | Contraseña del *Acceso al equipo* | Se genera una al azar en cada inicio y se muestra en la consola |
-| `ADMIN_USER` | Usuario del *Acceso al equipo* | `equipo` |
-| `PORT` | Puerto local | `3000` |
-| `HOST` | Interfaz de red | `0.0.0.0` |
-| `COOKIE_SECURE` | Poné `1` solo si el sitio se sirve por HTTPS | sin definir |
-
-Para la vista previa local, definilas **solo en la ventana de CMD actual** (se borran al cerrarla, así no queda ninguna contraseña guardada en archivos ni en el repositorio):
+La contraseña del *Acceso al equipo* se guarda en un archivo local `.dev.vars`, que **está excluido del repositorio** (`.gitignore`) y nunca se sube a GitHub.
 
 ```bat
-set HOST=127.0.0.1
-set ADMIN_PASSWORD=elegi-una-clave-solo-para-probar
+copy .dev.vars.example .dev.vars
+notepad .dev.vars
 ```
 
-`HOST=127.0.0.1` hace que el sitio sea accesible únicamente desde tu computadora, no desde otros equipos de tu red.
+En el Bloc de notas, reemplazá el valor después de `ADMIN_PASSWORD=` por una clave de prueba tuya, guardá y cerrá. No uses una contraseña real que uses en otros sitios.
 
-> Si no definís `ADMIN_PASSWORD`, no pasa nada: el servidor genera una temporal y la imprime al iniciar. No escribas contraseñas reales en archivos del repositorio.
+El usuario del portal es `equipo` (definido en `wrangler.toml`). Si no creás `.dev.vars`, el portal de equipo queda **deshabilitado** (no hay contraseña por defecto).
 
 ## 6. Iniciar el servidor
 
@@ -86,89 +68,99 @@ set ADMIN_PASSWORD=elegi-una-clave-solo-para-probar
 npm start
 ```
 
-Es equivalente a `node server.js`. Deberías ver:
-
-```text
-Observatorio del Ciberdelito en http://localhost:3000
-Acceso al equipo: usuario "equipo"
-```
-
-Dejá esta ventana abierta mientras probás el sitio.
+Este comando primero crea las tablas en la base **local** y luego inicia Wrangler en `127.0.0.1:8787` (solo accesible desde tu computadora). Dejá la ventana abierta mientras probás.
 
 ## 7. Abrir el sitio
 
-Abrí en tu navegador: **http://localhost:3000**
+Abrí en tu navegador: **http://localhost:8787**
 
-Eso es válido mientras no hayas cambiado `PORT`. Si definiste otro puerto (por ejemplo `set PORT=3001`), usá ese número en la URL.
+Ese es el puerto configurado en `npm start`. Si lo cambiás (sección 10), usá el nuevo número.
 
 ## 8. Verificar el funcionamiento
 
 - **Páginas:** recorré Inicio, El Observatorio, Metodología, Mapa del Ciberdelito, Investigación, Contacto y el enlace *Acceso al equipo* del pie de página.
-- **Mapa interactivo:** en `/mapa` cambiá la categoría y hacé clic en una provincia; debe aparecer su detalle. Los datos son de demostración y el sitio lo avisa.
-- **Formulario de contacto:** en `/contacto`, probá enviarlo vacío (deben aparecer errores en español). Completalo, marcá la casilla de aceptación y enviá: debe mostrar "Recibimos tu mensaje…". El mensaje se guarda en `data\mensajes.json` de tu copia local.
-- **Portal interno:** en `/equipo` ingresá con el usuario `equipo` y la contraseña que definiste en el paso 5 (o la que se imprimió en la consola). Probá crear una tarea, moverla entre columnas, eliminarla, y revisá que aparezca el mensaje de contacto que enviaste.
+- **Mapa interactivo:** en `/mapa` cambiá la categoría y hacé clic en una provincia; debe aparecer su detalle. Los valores son de demostración y el sitio lo avisa.
+- **Formulario de contacto:** en `/contacto` probá enviarlo vacío (errores en español). Luego completalo, marcá la casilla de aceptación y enviá: debe aparecer "Recibimos tu mensaje…". El mensaje queda en la base **local**.
+- **Portal interno:** en `/equipo` ingresá con usuario `equipo` y la clave que pusiste en `.dev.vars`. Creá una tarea, movela entre columnas, eliminala, y comprobá que aparezca el mensaje de contacto que enviaste.
 
-**Prueba automática (opcional).** En una segunda ventana de CMD, dentro de la carpeta del proyecto:
+**Prueba automática (opcional)**, en otra ventana de CMD dentro de la carpeta del proyecto:
 
 ```bat
 npm test
 ```
 
-Usa una carpeta de datos temporal y su propio puerto, así que no interfiere con tu vista previa ni con tus datos. Al final debe decir que todas las comprobaciones fueron correctas.
+Ejecuta el código del Worker contra una base SQLite en memoria (no toca tu base local ni Cloudflare). Al final debe decir cuántas comprobaciones fueron correctas. Requiere Node 22 o superior.
 
 ## 9. Detener el servidor
 
-En la ventana donde corre el servidor, presioná **Ctrl + C**. Si CMD pregunta "¿Desea terminar el trabajo por lotes (S/N)?", respondé `S`.
+En la ventana donde corre, presioná **Ctrl + C**. Si CMD pregunta "¿Desea terminar el trabajo por lotes (S/N)?", respondé `S`.
+
+Para borrar los datos de prueba locales (mensajes, tareas y sesiones):
+
+```bat
+rmdir /s /q .wrangler
+```
 
 ## 10. Solucionar errores comunes
 
 **`'node' no se reconoce como un comando interno o externo`**
-Node.js no está instalado o CMD no lo detecta. Instalalo desde https://nodejs.org, **cerrá y volvé a abrir CMD** y repetí `node --version`.
+Instalá Node.js (https://nodejs.org), **cerrá y reabrí CMD** y repetí `node --version`.
 
 **`'git' no se reconoce…`**
 Instalá Git para Windows, cerrá y reabrí CMD.
 
-**`Error: listen EADDRINUSE: address already in use`** (puerto ocupado)
-Opción rápida, usar otro puerto:
+**`'wrangler' no se reconoce` / `Cannot find module` / `npm start` falla enseguida**
+Faltan las dependencias o estás en la carpeta equivocada. Verificá con `dir wrangler.toml` y ejecutá `npm install`.
+
+**Puerto ocupado (`Address already in use` / `EADDRINUSE`)**
+Usá otro puerto:
 
 ```bat
-set PORT=3001
-npm start
+npm run migrar:local
+npx wrangler dev --local --ip 127.0.0.1 --port 8788
 ```
 
-y abrí http://localhost:3001. Para liberar el 3000, buscá qué proceso lo usa:
+y abrí http://localhost:8788. Para ver qué usa el 8787:
 
 ```bat
-netstat -ano | findstr :3000
-```
-
-El último número de la línea es el PID. Cerralo con:
-
-```bat
+netstat -ano | findstr :8787
 taskkill /PID <NUMERO_PID> /F
 ```
 
-**`Cannot find module`… o `package.json` no encontrado**
-Estás en la carpeta equivocada. Verificá con `dir server.js` y, si no aparece, volvé al paso 3.
+**El login dice "Usuario o contraseña incorrectos" o no deja ingresar**
+Revisá que exista `.dev.vars` con `ADMIN_PASSWORD=...` (sin espacios alrededor del `=`) y **reiniciá** el servidor (Ctrl + C y `npm start`) después de editarlo. Con 5 intentos fallidos el acceso se bloquea unos 10 minutos: borrá la base local con `rmdir /s /q .wrangler` y volvé a iniciar.
 
-**El login del portal dice "Usuario o contraseña incorrectos"**
-Las variables `set` valen solo en esa ventana de CMD y hasta que la cierres. Si abriste una ventana nueva, volvé a definir `ADMIN_PASSWORD` antes de `npm start`, o usá la contraseña temporal impresa en la consola. Con 5 intentos fallidos el acceso se bloquea unos 10 minutos: reiniciá el servidor (Ctrl + C y `npm start`).
+**`npm test` falla con "Cannot find module 'node:sqlite'"**
+Tu Node es anterior a la versión 22. Actualizalo y verificá con `node --version`.
 
-**Verificar las variables de la sesión actual**
-
-```bat
-echo %PORT% %HOST% %ADMIN_USER%
-```
-
-No imprimas `ADMIN_PASSWORD` si estás compartiendo pantalla.
+**Variables de entorno incorrectas**
+En la vista previa local no se usan variables de CMD: todo sale de `wrangler.toml` y `.dev.vars`. No hace falta ejecutar `set`.
 
 **La página carga sin estilos o el mapa no aparece**
-Recargá con **Ctrl + F5**. Si persiste, mirá la consola del servidor en CMD en busca de errores.
+Recargá con **Ctrl + F5** y mirá la consola de CMD en busca de errores.
 
 ---
 
-## Versión publicada (Cloudflare)
+## 11. Versión publicada en Cloudflare (producción)
 
-La publicación en Cloudflare es independiente de esta vista previa. Probar localmente nunca modifica la versión publicada, y publicar no requiere tener el servidor local encendido.
+> ⚠ Esta sección **sí afecta producción**. No la ejecutes si solo querés la vista previa.
 
-**Estado actual:** el sitio todavía **no está desplegado en Cloudflare**. Este proyecto es un servidor Node.js que guarda datos en archivos JSON, y eso no se ejecuta tal cual en Cloudflare Workers. Para publicarlo hay que adaptarlo (por ejemplo, almacenar mensajes y tareas en D1 o KV y servir los archivos estáticos desde Workers). Cuando eso esté hecho y verificado, la URL pública se registrará en el `README.md`.
+El proyecto ya define su base D1 (`observatorio-ciberdelito`) en `wrangler.toml`. Despliegue manual desde tu PC:
+
+```bat
+npx wrangler login
+npm run migrar:produccion
+npx wrangler secret put ADMIN_PASSWORD
+npm run desplegar
+```
+
+- `wrangler secret put` te pide la contraseña por teclado y la guarda cifrada en Cloudflare; no queda en ningún archivo.
+- Al final, `npm run desplegar` imprime la URL pública (`https://observatorio-ciberdelito.<tu-subdominio>.workers.dev`).
+
+**Despliegue automático desde GitHub.** El archivo `.github/workflows/desplegar.yml` prueba y despliega en cada `push` a `main`. Para activarlo, en el repositorio de GitHub andá a *Settings → Secrets and variables → Actions* y creá estos tres secretos:
+
+| Secreto | Valor |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token de API de Cloudflare con permisos para editar Workers y D1 |
+| `CLOUDFLARE_ACCOUNT_ID` | ID de tu cuenta de Cloudflare |
+| `ADMIN_PASSWORD` | Contraseña del acceso al equipo en producción |

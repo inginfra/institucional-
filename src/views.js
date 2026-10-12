@@ -1,4 +1,3 @@
-'use strict';
 // Plantillas del sitio. Todo el contenido visible está en español argentino (es-AR).
 
 const SITE = {
@@ -479,4 +478,4 @@ function render(pathname) {
   };
 }
 
-module.exports = { render, RUTAS };
+export { render, RUTAS };

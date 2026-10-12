@@ -1,0 +1,23 @@
+name = "observatorio-ciberdelito"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Archivos estáticos (CSS y JS del navegador). El Worker atiende primero todas las rutas.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+ADMIN_USER = "equipo"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "observatorio-ciberdelito"
+database_id = "12b6376d-ecbb-4947-9e2f-87ffab33555b"
+migrations_dir = "migrations"
+
+# Secreto requerido (NO se escribe acá): ADMIN_PASSWORD
+#   Producción:  npx wrangler secret put ADMIN_PASSWORD
+#   Local:       archivo .dev.vars (ver .dev.vars.example)
