@@ -1,0 +1,12 @@
+{
+  "name": "observatorio-ciberdelito",
+  "version": "1.0.0",
+  "description": "Sitio web del Observatorio Federal del Ciberdelito (es-AR). Sin dependencias externas.",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  }
+}
