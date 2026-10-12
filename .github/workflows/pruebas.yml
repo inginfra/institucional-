@@ -1,0 +1,18 @@
+name: Pruebas
+
+# El despliegue en Cloudflare lo realiza la integración nativa de Cloudflare con GitHub
+# (Workers Builds) en cada push a main. Este flujo solo ejecuta las pruebas.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node test.js

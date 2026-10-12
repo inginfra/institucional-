@@ -27,7 +27,7 @@ Node debe mostrar `v22.x` o mayor. Si algún comando no se reconoce, andá a la 
 
 ```bat
 cd %USERPROFILE%\Documents
-git clone https://github.com/inginfra/institucional-ofca.git
+git clone https://github.com/inginfra/institucional-.git
 ```
 
 Si el repositorio es privado, Git te pedirá iniciar sesión en GitHub la primera vez.
@@ -35,7 +35,7 @@ Si el repositorio es privado, Git te pedirá iniciar sesión en GitHub la primer
 ## 3. Entrar en la carpeta del proyecto
 
 ```bat
-cd institucional-ofca
+cd institucional-
 dir wrangler.toml
 ```
 
@@ -145,7 +145,17 @@ Recargá con **Ctrl + F5** y mirá la consola de CMD en busca de errores.
 
 > ⚠ Esta sección **sí afecta producción**. No la ejecutes si solo querés la vista previa.
 
-El proyecto ya define su base D1 (`observatorio-ciberdelito`) en `wrangler.toml`. Despliegue manual desde tu PC:
+- **Worker:** `institucional` (Cloudflare Workers). **Base de datos:** D1 `observatorio-ciberdelito`.
+- **URL temporal gratuita:** `https://institucional.<tu-subdominio>.workers.dev`. El subdominio exacto se ve en el panel de Cloudflare, en *Workers y Pages → institucional*.
+- **Despliegue automático:** cada `push` a la rama `main` de https://github.com/inginfra/institucional-.git lo despliega la integración de Cloudflare con GitHub. En el panel del Worker, *Configuración → Compilaciones*, el comando de despliegue debe ser:
+
+```text
+npx wrangler d1 migrations apply observatorio-ciberdelito --remote && npx wrangler deploy
+```
+
+- **Secreto obligatorio:** `ADMIN_PASSWORD`, cargado en el panel del Worker (*Configuración → Variables y secretos → Agregar → tipo Secreto*). No se escribe en el código ni en GitHub. Sin él, el acceso al equipo queda deshabilitado.
+
+**Despliegue manual desde tu PC (alternativa):**
 
 ```bat
 npx wrangler login
@@ -154,13 +164,14 @@ npx wrangler secret put ADMIN_PASSWORD
 npm run desplegar
 ```
 
-- `wrangler secret put` te pide la contraseña por teclado y la guarda cifrada en Cloudflare; no queda en ningún archivo.
-- Al final, `npm run desplegar` imprime la URL pública (`https://observatorio-ciberdelito.<tu-subdominio>.workers.dev`).
+`wrangler secret put` te pide la contraseña por teclado y la guarda cifrada en Cloudflare.
 
-**Despliegue automático desde GitHub.** El archivo `.github/workflows/desplegar.yml` prueba y despliega en cada `push` a `main`. Para activarlo, en el repositorio de GitHub andá a *Settings → Secrets and variables → Actions* y creá estos tres secretos:
+## 12. Cambiar al dominio definitivo (más adelante)
 
-| Secreto | Valor |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | Token de API de Cloudflare con permisos para editar Workers y D1 |
-| `CLOUDFLARE_ACCOUNT_ID` | ID de tu cuenta de Cloudflare |
-| `ADMIN_PASSWORD` | Contraseña del acceso al equipo en producción |
+El sitio no depende de la URL temporal, así que el cambio no requiere reconstruirlo:
+
+1. El dominio debe estar agregado a tu cuenta de Cloudflare (zona con DNS en Cloudflare).
+2. En el panel: *Workers y Pages → institucional → Configuración → Dominios y rutas → Agregar → Dominio personalizado*, e ingresá el dominio (por ejemplo `observatorio.tudominio.org`). Cloudflare crea el registro DNS y emite el certificado HTTPS automáticamente.
+3. Alternativa por código: agregá a `wrangler.toml` la línea `routes = [{ pattern = "observatorio.tudominio.org", custom_domain = true }]` y hacé `push` a `main`.
+4. Mantené `workers_dev = true` mientras dure la transición: la URL temporal sigue funcionando junto con el dominio nuevo. Cuando ya no la necesites, ponelo en `false`.
+5. Verificá que `https://tu-dominio/salud` responda y que el login del equipo funcione (la cookie de sesión se emite como `Secure` al usar HTTPS).
