@@ -49,6 +49,6 @@ Requiere Node 22 o superior. Ejecuta el código del Worker contra SQLite (el mot
 ## Publicación
 
 - **Worker de Cloudflare:** `institucional`, con despliegue automático desde la rama `main` mediante la integración de Cloudflare con GitHub.
-- **URL temporal gratuita:** `https://institucional.<tu-subdominio>.workers.dev` (el subdominio figura en el panel de Cloudflare).
+- **URL temporal gratuita:** **https://institucional.infra-ofca.workers.dev**.
 - **Dominio definitivo:** se agrega después sin reconstruir el sitio; pasos en la sección 12 del [instructivo](INSTRUCTIVO_CMD.md).
 - **Datos del mapa:** de demostración, no son cifras oficiales.

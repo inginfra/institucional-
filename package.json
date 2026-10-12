@@ -4,13 +4,16 @@
   "description": "Sitio web del Observatorio Federal del Ciberdelito (es-AR) sobre Cloudflare Workers y D1.",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "migrar:local": "wrangler d1 migrations apply observatorio-ciberdelito --local",
     "start": "npm run migrar:local && wrangler dev --local --ip 127.0.0.1 --port 8787",
     "test": "node test.js",
     "migrar:produccion": "wrangler d1 migrations apply observatorio-ciberdelito --remote",
-    "desplegar": "wrangler deploy"
+    "desplegar": "wrangler deploy",
+    "probar:produccion": "node scripts/prueba-produccion.mjs"
   },
   "devDependencies": {
     "wrangler": "^4"

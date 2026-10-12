@@ -146,7 +146,7 @@ Recargá con **Ctrl + F5** y mirá la consola de CMD en busca de errores.
 > ⚠ Esta sección **sí afecta producción**. No la ejecutes si solo querés la vista previa.
 
 - **Worker:** `institucional` (Cloudflare Workers). **Base de datos:** D1 `observatorio-ciberdelito`.
-- **URL temporal gratuita:** `https://institucional.<tu-subdominio>.workers.dev`. El subdominio exacto se ve en el panel de Cloudflare, en *Workers y Pages → institucional*.
+- **URL temporal gratuita:** **https://institucional.infra-ofca.workers.dev** (producción). Cloudflare también muestra una URL de preview, `https://preview-institucional.infra-ofca.workers.dev`, que solo sirve para pruebas.
 - **Despliegue automático:** cada `push` a la rama `main` de https://github.com/inginfra/institucional-.git lo despliega la integración de Cloudflare con GitHub. En el panel del Worker, *Configuración → Compilaciones*, el comando de despliegue debe ser:
 
 ```text
@@ -165,6 +165,17 @@ npm run desplegar
 ```
 
 `wrangler secret put` te pide la contraseña por teclado y la guarda cifrada en Cloudflare.
+
+
+**Probar el sitio publicado (solo lectura y datos de prueba).** Este script usa la URL de producción: crea un mensaje de contacto marcado como `[PRUEBA AUTOMÁTICA]` (queda guardado) y una tarea temporal que elimina al final. No modifica nada más.
+
+```bat
+set ADMIN_PASSWORD=la-clave-de-produccion
+npm run probar:produccion
+set ADMIN_PASSWORD=
+```
+
+La clave se toma de la variable de la ventana actual, no se guarda en archivos y el script nunca la imprime.
 
 ## 12. Cambiar al dominio definitivo (más adelante)
 
