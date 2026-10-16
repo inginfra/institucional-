@@ -37,12 +37,19 @@ const t404 = await r404.text();
 comprobar(r404.status === 404 && t404.includes('No encontramos la página'), 'página 404 en español');
 comprobar(!/stack|at\s+\S+\s+\(|ADMIN_PASSWORD|Error:/i.test(t404), 'la página 404 no expone detalles técnicos');
 comprobar((await pedir('/css/styles.css')).status === 200, 'archivo estático /css/styles.css');
-comprobar((await pedir('/js/mapa.js')).status === 200, 'archivo estático /js/mapa.js');
+for (const a of ['/js/ofca/dashboard.js', '/css/dashboard.css', '/data/argentina-jurisdicciones.json', '/favicon.svg'])
+  comprobar((await pedir(a)).status === 200, `archivo estático ${a}`);
 
 // Mapa
 const mapa = await (await pedir('/api/mapa')).json();
-comprobar(mapa.provincias?.length === 24, 'el mapa devuelve 24 jurisdicciones');
-comprobar(mapa.provincias?.every((p) => Object.values(p.valores).every((v) => v >= 0 && v <= 100)), 'valores del mapa entre 0 y 100');
+comprobar(mapa.jurisdicciones?.length === 24 && new Set(mapa.jurisdicciones).size === 24, '/api/mapa lista 24 jurisdicciones');
+comprobar(mapa.demostracion === false && mapa.territorial?.disponible === false, '/api/mapa no es de demostración y declara que no hay datos territoriales');
+const est = await (await pedir('/api/estadisticas')).json();
+comprobar(est.total2024?.total === 34468, '/api/estadisticas devuelve el total 2024 (34.468)');
+comprobar(est.categorias?.reduce((t, c) => t + c.total, 0) === est.total2024?.total, 'las categorías suman el total');
+comprobar(est.fuente?.cita?.startsWith('Fuente: UFECI, Informe 2024'), 'la respuesta cita la fuente');
+const geo = await (await pedir('/data/argentina-jurisdicciones.json')).json();
+comprobar(geo.jurisdicciones?.length === 24, 'la geometría tiene 24 jurisdicciones');
 
 // Formulario de contacto (validación y persistencia)
 let r = await pedir('/api/contacto', { method: 'POST', headers: JSONH, body: JSON.stringify({ nombre: '', email: 'x' }) });

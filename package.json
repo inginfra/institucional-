@@ -1,7 +1,7 @@
 {
   "name": "observatorio-ciberdelito",
   "version": "2.0.0",
-  "description": "Sitio web del Observatorio Federal del Ciberdelito (es-AR) sobre Cloudflare Workers y D1.",
+  "description": "Sitio web del OFCA – Observatorio Federal de Ciberdelincuencia Argentina (es-AR) sobre Cloudflare Workers y D1.",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,7 +10,11 @@
   "scripts": {
     "migrar:local": "wrangler d1 migrations apply observatorio-ciberdelito --local",
     "start": "npm run migrar:local && wrangler dev --local --ip 127.0.0.1 --port 8787",
-    "test": "node test.js",
+    "test": "node test.js && node pruebas/datos.test.js",
+    "test:navegador": "node pruebas/navegador.test.js",
+    "test:todo": "npm test && npm run test:navegador",
+    "preview:node": "node pruebas/servidor-local.js",
+    "geometrias": "node scripts/generar-geometrias.mjs",
     "migrar:produccion": "wrangler d1 migrations apply observatorio-ciberdelito --remote",
     "desplegar": "wrangler deploy",
     "probar:produccion": "node scripts/prueba-produccion.mjs"

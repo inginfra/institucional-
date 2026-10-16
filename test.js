@@ -1,52 +1,10 @@
-// Pruebas del Worker. Ejecutan el código real de src/worker.js en Node (22 o superior)
+// Pruebas del Worker (locales, en Node). Ejecutan el código real de src/worker.js en Node (22 o superior)
 // contra SQLite en memoria (el mismo motor que D1) con las migraciones reales.
 // No reemplazan una prueba en Cloudflare: ver INSTRUCTIVO_CMD.md ("Verificación en Cloudflare").
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync, existsSync } from 'node:fs';
-import { join, dirname, extname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import assert from 'node:assert';
+import { crearEntorno, crearD1 } from './pruebas/soporte.js';
 
-const aqui = dirname(fileURLToPath(import.meta.url));
-
-// workerd ofrece crypto.subtle.timingSafeEqual; Node no. Equivalente solo para las pruebas.
-import nodeCrypto from 'node:crypto';
-if (!crypto.subtle.timingSafeEqual) {
-  crypto.subtle.timingSafeEqual = (a, b) => {
-    const x = Buffer.from(a), y = Buffer.from(b);
-    return x.length === y.length && nodeCrypto.timingSafeEqual(x, y);
-  };
-}
-
-// Adaptador mínimo con la forma de la API de D1.
-function crearD1() {
-  const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(join(aqui, 'migrations/0001_inicial.sql'), 'utf8'));
-  return {
-    prepare(sql) {
-      const st = sqlite.prepare(sql);
-      const hacer = (args) => ({
-        async run() { st.run(...args); return { success: true }; },
-        async first() { return st.get(...args) ?? null; },
-        async all() { return { results: st.all(...args) }; },
-      });
-      return { ...hacer([]), bind: (...args) => hacer(args) };
-    },
-  };
-}
-const TIPOS = { '.css': 'text/css', '.js': 'text/javascript' };
-const ASSETS = {
-  async fetch(req) {
-    const p = join(aqui, 'public', new URL(req.url).pathname);
-    if (!p.startsWith(join(aqui, 'public')) || !existsSync(p)) return new Response('no', { status: 404 });
-    return new Response(readFileSync(p), { headers: { 'Content-Type': TIPOS[extname(p)] || 'application/octet-stream' } });
-  },
-};
-
-const { default: worker } = await import('./src/worker.js');
-const env = { DB: crearD1(), ASSETS, ADMIN_USER: 'equipo', ADMIN_PASSWORD: 'clave-de-prueba-123' };
-const BASE = 'https://observatorio.test';
-const llamar = (ruta, init = {}) => worker.fetch(new Request(BASE + ruta, init), env);
+const { llamar, worker, env, BASE } = await crearEntorno();
 const JSONH = { 'Content-Type': 'application/json' };
 
 let n = 0;
@@ -73,13 +31,34 @@ try {
   const nf = await llamar('/no-existe');
   ok(nf.status === 404 && (await nf.text()).includes('No encontramos la página'), '404 en español');
   ok((await llamar('/css/styles.css')).status === 200, 'archivo estático /css/styles.css');
-  ok((await llamar('/js/mapa.js')).headers.get('x-content-type-options') === 'nosniff', 'estáticos con cabeceras de seguridad');
+  ok((await llamar('/js/ofca/dashboard.js')).headers.get('x-content-type-options') === 'nosniff', 'estáticos con cabeceras de seguridad');
   ok((await llamar('/salud')).status === 200, '/salud responde');
 
+  // --- Mapa federal y tablero estadístico ---
   const mapa = await (await llamar('/api/mapa')).json();
-  ok(mapa.provincias.length === 24, 'el mapa tiene 24 jurisdicciones');
-  ok(mapa.provincias.every((p) => Object.values(p.valores).every((v) => v >= 0 && v <= 100)), 'valores del mapa entre 0 y 100');
-  ok(mapa.demostracion === true, 'el mapa se declara como datos de demostración');
+  ok(mapa.jurisdicciones.length === 24 && new Set(mapa.jurisdicciones).size === 24, '/api/mapa lista 24 jurisdicciones únicas');
+  ok(mapa.demostracion === false, '/api/mapa ya no es de demostración');
+  ok(mapa.territorial.disponible === false && /no disponibles/i.test(mapa.territorial.estado), '/api/mapa declara que no hay datos territoriales');
+  ok(!('provincias' in mapa), '/api/mapa no expone valores por provincia');
+  const est = await llamar('/api/estadisticas');
+  const dat = await est.json();
+  ok(est.status === 200 && dat.total2024.total === 34468, '/api/estadisticas devuelve el total 2024 (34.468)');
+  ok(dat.categorias.reduce((s, c) => s + c.total, 0) === dat.total2024.total, 'las categorías suman el total publicado');
+  ok(dat.fuente.cita === 'Fuente: UFECI, Informe 2024 - Casos y modalidades reportadas a UFECI, edición de junio de 2025.', 'la cita de la fuente es literal');
+  ok(Object.keys(dat.territorial.jurisdicciones).length === 0, 'no hay datos territoriales inventados');
+  const pm = await (await llamar('/mapa')).text();
+  ok(pm.includes('type="module" src="/js/ofca/dashboard.js"'), '/mapa carga el tablero como módulo');
+  ok(pm.includes('Fuente: UFECI, Informe 2024') && pm.includes('reportes recibidos por UFECI'), '/mapa muestra la fuente y su alcance');
+  ok(pm.includes('no fueron elaborados ni avalados por UFECI'), '/mapa distingue el análisis de OFCA de la autoría de UFECI');
+  ok(!/demostraci[oó]n|ilustrativ/i.test(pm), '/mapa ya no dice que son datos de demostración');
+  ok(!pm.includes(' style="'), '/mapa no usa atributos style (compatibles con la CSP)');
+  ok(pm.includes('Reportes recibidos por UFECI en 2024, por categoría') && pm.includes('34.468'), '/mapa incluye la tabla de respaldo sin JavaScript');
+  for (const a of ['/js/ofca/dashboard.js', '/js/ofca/mapa-svg.js', '/css/dashboard.css', '/data/argentina-jurisdicciones.json', '/favicon.svg'])
+    ok((await llamar(a)).status === 200, `estático ${a} disponible`);
+  const home = await (await llamar('/')).text();
+  ok(home.includes('34.468') && home.includes('+21,1'), 'el inicio muestra cifras 2024 con formato es-AR');
+  ok(!/ISO\/IEC 27001|revisi[oó]n por pares|OSINT/.test(home + pm + (await (await llamar('/metodologia')).text()) + (await (await llamar('/el-observatorio')).text())), 'sin afirmaciones no verificables (ISO 27001, revisión por pares, OSINT)');
+  ok((await (await llamar('/')).text()).includes('no es UFECI'), 'el pie aclara que OFCA no es UFECI ni integra el MPF');
 
   let r = await llamar('/api/contacto', { method: 'POST', headers: JSONH, body: JSON.stringify({ nombre: '', email: 'x' }) });
   ok(r.status === 422, 'contacto inválido devuelve 422');

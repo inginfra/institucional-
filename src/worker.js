@@ -1,5 +1,6 @@
 // Cloudflare Worker del Observatorio: páginas, API y persistencia en D1.
 import { render } from './views.js';
+import { datosPublicos, JURISDICCIONES_ISO, TERRITORIAL } from './datos/ufeci2024.js';
 
 const MAX_BODY = 32 * 1024;
 const SESION_SEG = 8 * 60 * 60;
@@ -101,47 +102,26 @@ function cookieSesion(valor, maxAge, seguro) {
   return `sid=${valor}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${seguro ? '; Secure' : ''}`;
 }
 
-// ---------- Datos de demostración del mapa ----------
-const PROVINCIAS = [
-  ['jujuy', 'Jujuy', 1, 0], ['salta', 'Salta', 2, 0], ['formosa', 'Formosa', 4, 0],
-  ['tucuman', 'Tucumán', 2, 1], ['santiago', 'Santiago del Estero', 3, 1], ['chaco', 'Chaco', 4, 1], ['misiones', 'Misiones', 6, 1],
-  ['larioja', 'La Rioja', 1, 2], ['catamarca', 'Catamarca', 2, 2], ['santafe', 'Santa Fe', 4, 2], ['corrientes', 'Corrientes', 5, 2],
-  ['sanjuan', 'San Juan', 1, 3], ['cordoba', 'Córdoba', 3, 3], ['entrerios', 'Entre Ríos', 5, 3],
-  ['mendoza', 'Mendoza', 1, 4], ['sanluis', 'San Luis', 2, 4], ['lapampa', 'La Pampa', 3, 4], ['buenosaires', 'Buenos Aires', 4, 4], ['caba', 'Ciudad Autónoma de Buenos Aires', 5, 4],
-  ['neuquen', 'Neuquén', 2, 5], ['rionegro', 'Río Negro', 3, 5],
-  ['chubut', 'Chubut', 3, 6], ['santacruz', 'Santa Cruz', 3, 7], ['tierradelfuego', 'Tierra del Fuego', 3, 8],
-];
-const CATEGORIAS = [
-  { id: 'estafas', nombre: 'Estafas virtuales' },
-  { id: 'identidad', nombre: 'Suplantación de identidad' },
-  { id: 'extorsion', nombre: 'Extorsión digital' },
-];
-function valorDemo(prov, cat) {
-  let h = 2166136261; // FNV-1a: determinista y sin dependencias
-  for (const c of `demo:${prov}:${cat}`) {
-    h ^= c.charCodeAt(0);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  return h % 101;
-}
-function datosMapa() {
-  return {
-    demostracion: true,
-    aviso: 'Datos de demostración: no representan cifras oficiales.',
-    categorias: CATEGORIAS,
-    provincias: PROVINCIAS.map(([id, nombre, col, fila]) => ({
-      id, nombre, col, fila,
-      valores: Object.fromEntries(CATEGORIAS.map((c) => [c.id, valorDemo(id, c.id)])),
-    })),
-  };
-}
-
 // ---------- API ----------
 async function api(request, env, url) {
   const ruta = url.pathname;
   const metodo = request.method;
 
-  if (ruta === '/api/mapa' && metodo === 'GET') return json(datosMapa());
+  // Estadísticas nacionales de UFECI 2024: única fuente de cifras del sitio (src/datos/ufeci2024.js).
+  if (ruta === '/api/estadisticas' && metodo === 'GET')
+    return json(datosPublicos(), 200, { 'Cache-Control': 'public, max-age=300' });
+
+  // Estado territorial: lista de jurisdicciones y disponibilidad de datos. No contiene valores inventados.
+  if (ruta === '/api/mapa' && metodo === 'GET')
+    return json(
+      {
+        demostracion: false,
+        jurisdicciones: JURISDICCIONES_ISO,
+        territorial: { disponible: TERRITORIAL.disponible, estado: TERRITORIAL.estado, motivo: TERRITORIAL.motivo },
+      },
+      200,
+      { 'Cache-Control': 'public, max-age=300' }
+    );
 
   if (ruta === '/api/contacto' && metodo === 'POST') {
     const clave = `contacto:${ipDe(request)}`;

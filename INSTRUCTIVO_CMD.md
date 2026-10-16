@@ -79,7 +79,7 @@ Ese es el puerto configurado en `npm start`. Si lo cambiás (sección 10), usá 
 ## 8. Verificar el funcionamiento
 
 - **Páginas:** recorré Inicio, El Observatorio, Metodología, Mapa del Ciberdelito, Investigación, Contacto y el enlace *Acceso al equipo* del pie de página.
-- **Mapa interactivo:** en `/mapa` cambiá la categoría y hacé clic en una provincia; debe aparecer su detalle. Los valores son de demostración y el sitio lo avisa.
+- **Mapa y tablero:** en `/mapa` pasá el cursor sobre una provincia (aparece su nombre y el aviso de que el informe no publica datos desagregados), hacé clic para seleccionarla (panel de detalle con el dato **nacional** rotulado aparte), usá Tab/Enter/Escape con el teclado, elegí una barra de categoría para filtrar, alterná *Cantidad/Porcentaje* y probá *Limpiar filtros*. Las cifras son reales (UFECI, Informe 2024) y nacionales; no hay cifras por provincia.
 - **Formulario de contacto:** en `/contacto` probá enviarlo vacío (errores en español). Luego completalo, marcá la casilla de aceptación y enviá: debe aparecer "Recibimos tu mensaje…". El mensaje queda en la base **local**.
 - **Portal interno:** en `/equipo` ingresá con usuario `equipo` y la clave que pusiste en `.dev.vars`. Creá una tarea, movela entre columnas, eliminala, y comprobá que aparezca el mensaje de contacto que enviaste.
 
@@ -88,6 +88,8 @@ Ese es el puerto configurado en `npm start`. Si lo cambiás (sección 10), usá 
 ```bat
 npm test
 ```
+
+Para probar además el mapa en un **navegador real** (opcional, requiere Playwright con Chromium): `npm run test:navegador`. Para abrir el sitio en Node, sin Cloudflare, con datos en memoria: `npm run preview:node` y entrá a http://127.0.0.1:8788 (es solo una ayuda; la vista previa oficial sigue siendo `npm start`).
 
 Ejecuta el código del Worker contra una base SQLite en memoria (no toca tu base local ni Cloudflare). Al final debe decir cuántas comprobaciones fueron correctas. Requiere Node 22 o superior.
 

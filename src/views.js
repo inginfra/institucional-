@@ -1,11 +1,20 @@
 // Plantillas del sitio. Todo el contenido visible está en español argentino (es-AR).
+import { FUENTE, CATEGORIAS, TOTAL_2024, ANUAL } from './datos/ufeci2024.js';
 
 const SITE = {
-  nombre: 'Observatorio Federal del Ciberdelito',
-  corto: 'Observatorio del Ciberdelito',
+  nombre: 'Observatorio Federal de Ciberdelincuencia Argentina',
+  sigla: 'OFCA',
+  corto: 'OFCA',
   descripcion:
-    'Observatorio federal que analiza el ciberdelito y las estafas virtuales en las provincias argentinas, con metodología abierta e investigación independiente.',
+    'OFCA es una iniciativa civil independiente que organiza y explica la información pública sobre ciberdelito y estafas virtuales en Argentina, con fuentes citadas y límites a la vista.',
 };
+
+const fmt = new Intl.NumberFormat('es-AR', { useGrouping: 'always' });
+const fmt1 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const NBSP = '\u00a0';
+
+// Logo de OFCA: anillo abierto (el cuadrante noreste queda sin trazo) con dos puntos de acento.
+const LOGO_SVG = `<svg class="marca__logo" viewBox="0 0 40 40" width="36" height="36" aria-hidden="true" focusable="false"><path d="M20 5.5A14.5 14.5 0 1 0 34.5 20" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><circle cx="20" cy="20" r="3.2" class="logo__nucleo"/><circle cx="29.2" cy="10.8" r="2.6" class="logo__acento"/><circle cx="34" cy="6" r="1.5" class="logo__acento"/></svg>`;
 
 const NAV = [
   { href: '/', texto: 'Inicio' },
@@ -19,14 +28,18 @@ const NAV = [
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function layout({ ruta, titulo, descripcion, cuerpo, scripts = [], noindex = false }) {
+function layout({ ruta, titulo, descripcion, cuerpo, scripts = [], modulos = [], estilos = [], noindex = false }) {
   const tituloCompleto = ruta === '/' ? `${SITE.nombre}` : `${titulo} | ${SITE.corto}`;
   const desc = descripcion || SITE.descripcion;
   const nav = NAV.map(
     (n) =>
       `<li><a href="${n.href}"${n.href === ruta ? ' aria-current="page"' : ''}>${n.texto}</a></li>`
   ).join('');
-  const sc = scripts.map((s) => `<script src="${s}" defer></script>`).join('\n  ');
+  const sc = [
+    ...scripts.map((s) => `<script src="${s}" defer></script>`),
+    ...modulos.map((s) => `<script type="module" src="${s}"></script>`),
+  ].join('\n  ');
+  const css = ['/css/styles.css', ...estilos].map((h) => `<link rel="stylesheet" href="${h}">`).join('\n  ');
   return `<!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -40,17 +53,17 @@ function layout({ ruta, titulo, descripcion, cuerpo, scripts = [], noindex = fal
   <meta property="og:site_name" content="${esc(SITE.nombre)}">
   <meta property="og:title" content="${esc(tituloCompleto)}">
   <meta property="og:description" content="${esc(desc)}">
-  <meta name="theme-color" content="#0b2545">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b2545'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%2313c4a3' stroke-width='3'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/css/styles.css">
+  <meta name="theme-color" content="#0b1b2e">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  ${css}
 </head>
 <body>
   <a class="saltar" href="#contenido">Saltar al contenido principal</a>
   <header class="cabecera">
     <div class="contenedor cabecera__fila">
-      <a class="marca" href="/" aria-label="${esc(SITE.nombre)}: ir al inicio">
-        <span class="marca__icono" aria-hidden="true"></span>
-        <span class="marca__texto">${esc(SITE.nombre)}</span>
+      <a class="marca" href="/" aria-label="${esc(SITE.sigla)}, ${esc(SITE.nombre)}: ir al inicio">
+        ${LOGO_SVG}
+        <span class="marca__texto"><strong>${SITE.sigla}</strong><small>Observatorio Federal de Ciberdelincuencia Argentina</small></span>
       </a>
       <button class="menu-boton" type="button" aria-expanded="false" aria-controls="menu-principal">Menú</button>
       <nav aria-label="Navegación principal">
@@ -65,7 +78,7 @@ ${cuerpo}
     <div class="contenedor pie__grid">
       <div>
         <strong>${esc(SITE.nombre)}</strong>
-        <p>Información independiente y rigurosa para entender y reducir el ciberdelito en todo el país.</p>
+        <p>Iniciativa civil independiente para entender el ciberdelito con datos públicos, fuentes citadas y límites a la vista.</p>
       </div>
       <nav aria-label="Enlaces del pie de página">
         <ul class="pie__enlaces">
@@ -78,6 +91,7 @@ ${cuerpo}
     </div>
     <div class="contenedor pie__legal">
       <p>Este sitio no recibe denuncias. Si fuiste víctima de un delito, hacé la denuncia ante la autoridad competente de tu provincia.</p>
+      <p>OFCA es una iniciativa civil independiente: no es UFECI, no integra el Ministerio Público Fiscal ni representa a ningún organismo del Estado. Las estadísticas que se muestran pertenecen a sus fuentes, citadas en cada sección.</p>
     </div>
   </footer>
   <script src="/js/menu.js" defer></script>
@@ -89,15 +103,17 @@ ${cuerpo}
 // ---------- Páginas ----------
 
 function inicio() {
+  const fraude = CATEGORIAS.find((c) => c.id === 'fraude-en-linea');
+  const a23 = ANUAL.serie.find((x) => x.anio === 2023).total;
   return {
     titulo: SITE.nombre,
     cuerpo: `
     <section class="hero">
       <div class="contenedor hero__grid">
         <div>
-          <p class="etiqueta">Observatorio independiente</p>
-          <h1>Datos abiertos y análisis riguroso para enfrentar el ciberdelito en todo el país</h1>
-          <p class="bajada">Relevamos, comparamos y explicamos cómo se manifiestan las estafas virtuales y otros delitos informáticos en cada provincia, para que la sociedad y las instituciones decidan con mejor información.</p>
+          <p class="etiqueta">Iniciativa civil independiente</p>
+          <h1>Datos públicos y análisis riguroso para entender el ciberdelito en Argentina</h1>
+          <p class="bajada">Organizamos y explicamos la información pública disponible sobre estafas virtuales y otros ciberdelitos. Cada cifra cita su fuente y cada límite queda a la vista.</p>
           <p class="acciones">
             <a class="boton" href="/mapa">Explorá el Mapa Federal del Ciberdelito</a>
             <a class="boton boton--secundario" href="/metodologia">Conocé cómo trabajamos</a>
@@ -113,15 +129,28 @@ function inicio() {
 
     <section class="seccion">
       <div class="contenedor">
+        <h2>2024 en cifras</h2>
+        <div class="cifras">
+          <article class="cifra"><p class="cifra__valor">${fmt.format(TOTAL_2024.total)}</p><p>reportes recibidos por UFECI en 2024</p></article>
+          <article class="cifra"><p class="cifra__valor">+${fmt1.format(ANUAL.variacion2024vs2023Publicada)}${NBSP}%</p><p>respecto de 2023 (${fmt.format(a23)} reportes)</p></article>
+          <article class="cifra"><p class="cifra__valor">${fmt1.format(fraude.porcentajePublicado)}${NBSP}%</p><p>corresponde a «${fraude.nombre}», la categoría más reportada</p></article>
+        </div>
+        <p class="nota">${esc(FUENTE.cita)} ${esc(FUENTE.aclaracion)}</p>
+        <p class="acciones"><a class="enlace-flecha" href="/mapa">Explorá el Mapa Federal del Ciberdelito</a></p>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <div class="contenedor">
         <h2>Qué hacemos</h2>
         <div class="grilla grilla--3">
           <article class="tarjeta">
-            <h3>Medimos</h3>
-            <p>Integramos fuentes públicas y registros institucionales con criterios comunes, para comparar provincias sin distorsiones.</p>
+            <h3>Transcribimos y verificamos</h3>
+            <p>Tomamos cifras de fuentes oficiales, las cargamos en una base estructurada y las controlamos con pruebas automáticas de sumas y porcentajes.</p>
           </article>
           <article class="tarjeta">
-            <h3>Investigamos</h3>
-            <p>Estudiamos modalidades, perfiles de víctimas y brechas de respuesta con enfoque federal e interdisciplinario.</p>
+            <h3>Explicamos</h3>
+            <p>Presentamos los datos con gráficos accesibles, aclarando qué cuenta cada cifra, qué no cuenta y dónde el propio informe tiene discrepancias.</p>
           </article>
           <article class="tarjeta">
             <h3>Orientamos</h3>
@@ -137,9 +166,10 @@ function inicio() {
         <h2>Principios de trabajo</h2>
         <ul class="lista-principios">
           <li><strong>Transparencia metodológica.</strong> Cada indicador explica de dónde sale y cuáles son sus límites.</li>
-          <li><strong>Protección de datos personales.</strong> Trabajamos con información agregada y anonimizada.</li>
-          <li><strong>Independencia.</strong> Nuestros informes no responden a intereses comerciales ni partidarios.</li>
-          <li><strong>Enfoque federal.</strong> Ninguna provincia queda afuera de la mirada.</li>
+          <li><strong>Sin datos inventados.</strong> Si una fuente no publica una cifra, lo decimos; no la estimamos.</li>
+          <li><strong>Protección de datos personales.</strong> Trabajamos con información agregada y pública.</li>
+          <li><strong>Independencia.</strong> Somos una iniciativa civil, sin vínculo institucional con los organismos cuyas fuentes citamos.</li>
+          <li><strong>Enfoque federal.</strong> Incorporaremos datos por provincia cuando una fuente oficial los publique. Hoy el informe base no los incluye.</li>
         </ul>
       </div>
     </section>`,
@@ -150,25 +180,25 @@ function elObservatorio() {
   return {
     titulo: 'El Observatorio',
     descripcion:
-      'Quiénes somos, para qué existimos y cómo nos organizamos: un observatorio federal e independiente sobre ciberdelito y estafas virtuales en Argentina.',
+      'Quiénes somos, para qué existimos y cómo trabajamos: OFCA, una iniciativa civil independiente sobre ciberdelito y estafas virtuales en Argentina.',
     cuerpo: `
     <section class="seccion">
       <div class="contenedor contenido-texto">
         <h1>El Observatorio</h1>
-        <p class="bajada">Somos un equipo interdisciplinario que estudia el ciberdelito desde una perspectiva federal, con evidencia verificable y lenguaje accesible.</p>
+        <p class="bajada">OFCA es una iniciativa civil independiente que estudia el ciberdelito con evidencia verificable y lenguaje accesible.</p>
+        <h2>Qué es y qué no es</h2>
+        <p>OFCA no es la Unidad Fiscal Especializada en Ciberdelincuencia (UFECI), no integra el Ministerio Público Fiscal ni representa a ningún organismo del Estado. Usamos información pública de esas y otras instituciones, la citamos y la presentamos con análisis propio, que no fue elaborado ni avalado por ellas.</p>
         <h2>Misión</h2>
-        <p>Producir conocimiento confiable sobre el ciberdelito y las estafas virtuales en las provincias argentinas, y ponerlo a disposición de la sociedad, la academia y el Estado.</p>
+        <p>Producir y difundir conocimiento confiable sobre el ciberdelito y las estafas virtuales en Argentina, y ponerlo a disposición de la sociedad, la academia y el Estado.</p>
         <h2>Objetivos</h2>
         <ul>
-          <li>Construir y mantener el Mapa Federal del Ciberdelito con criterios metodológicos públicos.</li>
-          <li>Documentar modalidades delictivas emergentes y su evolución territorial.</li>
+          <li>Mantener el Mapa Federal del Ciberdelito con criterios metodológicos públicos.</li>
+          <li>Documentar modalidades delictivas y su evolución en el tiempo y, cuando existan fuentes oficiales, en el territorio.</li>
           <li>Identificar brechas en la prevención, la denuncia y la respuesta institucional.</li>
           <li>Difundir recomendaciones prácticas para reducir riesgos.</li>
         </ul>
-        <h2>Gobernanza</h2>
-        <p>El Observatorio se rige por principios de independencia editorial, transparencia en el uso de fuentes y protección de datos personales. Las decisiones metodológicas se documentan y se publican junto con cada informe.</p>
-        <h2>Seguridad de la información</h2>
-        <p>Aplicamos prácticas de desarrollo seguro (DevSecOps) y controles alineados con estándares reconocidos, como la norma ISO/IEC 27001, para resguardar la información que gestionamos.</p>
+        <h2>Principios editoriales</h2>
+        <p>Independencia editorial, transparencia en el uso de fuentes y protección de datos personales. Las decisiones metodológicas se documentan y se publican junto con cada visualización.</p>
         <p><a class="boton" href="/contacto">Escribinos</a></p>
       </div>
     </section>`,
@@ -179,30 +209,40 @@ function metodologia() {
   return {
     titulo: 'Metodología',
     descripcion:
-      'Conocé cómo trabajamos: fuentes, criterios de clasificación, tratamiento de datos personales y límites de los indicadores del Observatorio.',
+      'Conocé cómo trabajamos: fuente, transcripción, cálculos propios, límites de los indicadores y criterios para incorporar datos territoriales.',
     cuerpo: `
     <section class="seccion">
       <div class="contenedor contenido-texto">
         <h1>Metodología</h1>
-        <p class="bajada">Un indicador solo es útil si se entiende cómo se construyó. Esta sección explica nuestro proceso de punta a punta.</p>
+        <p class="bajada">Un indicador solo es útil si se entiende cómo se construyó. Esta página describe lo que OFCA hace hoy, no lo que planea hacer.</p>
 
-        <h2>1. Fuentes</h2>
-        <p>Trabajamos con tres tipos de fuentes: registros institucionales publicados por organismos oficiales, relevamientos propios y fuentes abiertas analizadas mediante técnicas de OSINT (inteligencia de fuentes abiertas). Toda fuente se identifica, se fecha y se archiva.</p>
+        <h2>1. Fuente actual</h2>
+        <p>Todas las estadísticas del tablero provienen de un único documento: <em>UFECI, Informe 2024 - Casos y modalidades reportadas a UFECI</em>, edición de junio de 2025. Las cifras son <strong>reportes recibidos por UFECI</strong>: no miden delitos ocurridos, víctimas únicas, denuncias judiciales ni prevalencia.</p>
 
-        <h2>2. Clasificación de los hechos</h2>
-        <p>Agrupamos los hechos en categorías comunes —por ejemplo, estafas virtuales, suplantación de identidad y extorsión digital— para poder comparar provincias, aun cuando los registros locales usen denominaciones distintas.</p>
+        <h2>2. Transcripción y control de integridad</h2>
+        <p>Las cifras se cargaron en un archivo estructurado, con la página del informe de la que surgen. Pruebas automáticas verifican que las categorías sumen el total, que los porcentajes coincidan con los publicados y que las series mensuales y anuales sean consistentes. Cuando el informe tiene discrepancias internas, no las corregimos: las mostramos en «Notas sobre la fuente».</p>
 
-        <h2>3. Normalización</h2>
-        <p>Los valores se expresan en relación con la población y se ajustan por diferencias en la cantidad de denuncias formales. De este modo se evita confundir mayor conectividad o mayor propensión a denunciar con mayor incidencia delictiva.</p>
+        <h2>3. Cálculos propios</h2>
+        <ul>
+          <li>Los porcentajes se calculan sobre el universo indicado en cada gráfico y se redondean a un decimal.</li>
+          <li>En «Porcentaje», la serie mensual muestra qué parte del total anual de esa serie corresponde a cada mes.</li>
+          <li>Las variaciones interanuales de 2022 y 2023 se calculan con los totales publicados; la de 2024 coincide con la que publica UFECI.</li>
+        </ul>
 
-        <h2>4. Subregistro y límites</h2>
-        <p>Una parte importante de los ciberdelitos no se denuncia. Por eso, los indicadores describen lo registrado y lo relevado, no la totalidad de los hechos. Cada publicación detalla sus limitaciones.</p>
+        <h2>4. Lo que no hacemos</h2>
+        <p>No estimamos cifras por provincia, no calculamos tasas por habitante y no dibujamos mapas de calor con datos que la fuente no publica. El informe de UFECI no desagrega por jurisdicción, por lo que el mapa permite navegar entre las 24 jurisdicciones pero indica expresamente que no hay datos territoriales.</p>
 
-        <h2>5. Protección de datos personales</h2>
-        <p>Solo trabajamos con información agregada o anonimizada. No publicamos datos que permitan identificar a víctimas ni a terceros, en cumplimiento de la normativa argentina de protección de datos personales.</p>
+        <h2>5. Subregistro y límites</h2>
+        <p>Solo llegan a UFECI los hechos que las personas deciden reportar y por ese canal, de modo que hay subregistro y sesgo de canal. Los análisis específicos (extorsión, ransomware, subtipos) tienen universos propios y no se suman a las seis categorías principales.</p>
 
-        <h2>6. Control de calidad y trazabilidad</h2>
-        <p>Los procesos de integración de datos se automatizan mediante CI/CD (integración y entrega continuas) con pruebas automáticas y revisión por pares. Cada cambio queda registrado y puede auditarse.</p>
+        <h2>6. Cartografía</h2>
+        <p>Las geometrías provienen de Natural Earth (dominio público), simplificadas para visualización nacional. No reemplazan la cartografía oficial del Instituto Geográfico Nacional ni incluyen las islas del Atlántico Sur ni la Antártida Argentina.</p>
+
+        <h2>7. Incorporación futura de datos territoriales</h2>
+        <p>Un dato por jurisdicción solo se incorporará si cuenta con fuente oficial citable, período, unidad de medida, universo y cobertura explícitos. El sistema rechaza automáticamente los datos territoriales que no declaren esos campos, y no calcula tasas ni rankings sin un denominador verificado.</p>
+
+        <h2>8. Protección de datos personales</h2>
+        <p>Solo trabajamos con información agregada y pública. No publicamos datos que permitan identificar a víctimas ni a terceros, en cumplimiento de la normativa argentina de protección de datos personales.</p>
 
         <p><a class="boton" href="/mapa">Explorá el Mapa Federal del Ciberdelito</a></p>
       </div>
@@ -210,37 +250,102 @@ function metodologia() {
   };
 }
 
+function tablaNoscript() {
+  const filas = [...CATEGORIAS]
+    .sort((a, b) => b.total - a.total)
+    .map((c) => `<tr><th scope="row">${esc(c.nombre)}</th><td>${fmt.format(c.total)}</td><td>${fmt1.format(c.porcentajePublicado)}${NBSP}%</td></tr>`)
+    .join('');
+  return `<noscript>
+          <div class="aviso" role="note">Para usar el mapa y los gráficos interactivos necesitás habilitar JavaScript. Mientras tanto, esta es la tabla de reportes de 2024 por categoría.</div>
+          <table class="tabla"><caption>Reportes recibidos por UFECI en 2024, por categoría</caption>
+            <thead><tr><th scope="col">Categoría</th><th scope="col">Reportes</th><th scope="col">% del total</th></tr></thead>
+            <tbody>${filas}</tbody>
+            <tfoot><tr><th scope="row">Total</th><td>${fmt.format(TOTAL_2024.total)}</td><td>100,0${NBSP}%</td></tr></tfoot>
+          </table>
+        </noscript>`;
+}
+
 function mapa() {
   return {
     titulo: 'Mapa del Ciberdelito',
     descripcion:
-      'Explorá el Mapa Federal del Ciberdelito: una vista esquemática de las 24 jurisdicciones argentinas con indicadores por categoría.',
-    scripts: ['/js/mapa.js'],
+      'Explorá el Mapa Federal del Ciberdelito: las 24 jurisdicciones argentinas y el tablero de reportes recibidos por UFECI en 2024, con fuente y límites a la vista.',
+    modulos: ['/js/ofca/dashboard.js'],
+    estilos: ['/css/dashboard.css'],
     cuerpo: `
-    <section class="seccion">
+    <section class="explorador" id="ofca-app" data-cargando="true">
       <div class="contenedor">
-        <h1>Mapa del Ciberdelito</h1>
-        <p class="bajada">Vista federal esquemática: cada recuadro representa una jurisdicción. Elegí una categoría y seleccioná una provincia para ver el detalle.</p>
-        <div class="aviso" role="note">
-          <strong>Datos de demostración.</strong> Los valores que se muestran son ilustrativos y no representan cifras oficiales. Se reemplazarán por los indicadores reales cuando se complete la integración de fuentes descripta en la <a href="/metodologia">metodología</a>.
+        <header class="explorador__cabecera">
+          <p class="etiqueta">Mapa Federal del Ciberdelito</p>
+          <h1>Mapa del Ciberdelito</h1>
+          <p class="bajada">Explorá las 24 jurisdicciones y el tablero de reportes de ciberdelito de 2024. Los números son nacionales: el informe de origen no publica datos por provincia.</p>
+        </header>
+        <aside class="fuente" aria-label="Fuente y alcance de los datos">
+          <p class="fuente__cita"><strong>${esc(FUENTE.cita)}</strong></p>
+          <p>${esc(FUENTE.aclaracion)}</p>
+          <p>${esc(FUENTE.autoria)}</p>
+        </aside>
+        <div id="ofca-estado" class="estado-carga estado-carga--cargando" role="status"><p>Cargando datos del explorador…</p></div>
+        ${tablaNoscript()}
+        <div id="ofca-anuncio" class="solo-lectores" role="status" aria-live="polite"></div>
+
+        <div class="filtros" id="ofca-filtros" aria-label="Filtros del tablero"></div>
+        <p id="ofca-aviso-jurisdiccion" class="aviso aviso--jurisdiccion" role="note" hidden></p>
+
+        <div class="explorador__cuerpo">
+          <section class="explorador__mapa" aria-labelledby="titulo-mapa">
+            <h2 id="titulo-mapa">Jurisdicciones</h2>
+            <div id="ofca-mapa" class="mapa-caja"></div>
+            <ul id="ofca-leyenda-mapa" class="leyenda-mapa"></ul>
+            <p id="ofca-aviso-mapa" class="nota"></p>
+          </section>
+          <aside class="explorador__panel" aria-label="Detalle de la jurisdicción" id="ofca-panel" aria-live="polite"></aside>
         </div>
-        <div class="mapa-layout">
-          <div>
-            <label for="categoria" class="etiqueta-campo">Categoría</label>
-            <select id="categoria" class="campo"></select>
-            <div id="mapa" class="mapa" role="group" aria-label="Mapa esquemático de las jurisdicciones argentinas"></div>
-            <div class="leyenda" aria-hidden="true">
-              <span>Menor</span><span class="leyenda__barra"></span><span>Mayor</span>
-            </div>
-          </div>
-          <aside class="tarjeta" aria-live="polite" id="detalle">
-            <h2>Detalle</h2>
-            <p>Seleccioná una provincia en el mapa.</p>
-          </aside>
+
+        <section class="tablero" aria-labelledby="titulo-kpis">
+          <h2 id="titulo-kpis">Indicadores clave · Total nacional, 2024</h2>
+          <div id="ofca-kpis" class="kpis"></div>
+        </section>
+
+        <section class="tablero" aria-labelledby="titulo-cat">
+          <h2 id="titulo-cat">Reportes por categoría</h2>
+          <p class="nota">Elegí una barra para filtrar el resto del tablero; volvé a elegirla para quitar el filtro.</p>
+          <div id="ofca-categorias" class="grafico"></div>
+        </section>
+
+        <div class="tablero__doble">
+          <section class="tablero" aria-labelledby="titulo-mensual">
+            <h2 id="titulo-mensual">Evolución mensual, 2024</h2>
+            <div id="ofca-mensual" class="grafico"></div>
+            <p id="ofca-mensual-nota" class="nota"></p>
+          </section>
+          <section class="tablero" aria-labelledby="titulo-anual">
+            <h2 id="titulo-anual">Evolución interanual</h2>
+            <div id="ofca-anual" class="grafico"></div>
+            <p id="ofca-anual-nota" class="nota"></p>
+          </section>
         </div>
-        <noscript><p class="aviso">Para ver el mapa interactivo necesitás habilitar JavaScript en tu navegador.</p></noscript>
-        <h2>Cómo leer el mapa</h2>
-        <p>El índice va de 0 a 100 y es relativo: compara jurisdicciones entre sí dentro de una misma categoría. No indica cantidad de casos ni permite comparar categorías distintas.</p>
+
+        <section class="tablero" aria-labelledby="titulo-modalidades">
+          <h2 id="titulo-modalidades">Detalle por modalidad</h2>
+          <div id="ofca-modalidades"></div>
+        </section>
+
+        <section class="tablero" aria-labelledby="titulo-analisis">
+          <h2 id="titulo-analisis">Análisis específicos del informe</h2>
+          <p class="nota">Tienen universo y unidad propios: no se suman a las seis categorías ni al total.</p>
+          <div id="ofca-analisis" class="analisis-grilla"></div>
+        </section>
+
+        <section class="tablero" aria-labelledby="titulo-notas">
+          <h2 id="titulo-notas">Notas sobre la fuente</h2>
+          <div id="ofca-notas"></div>
+        </section>
+
+        <section class="tablero" aria-labelledby="titulo-tablas">
+          <h2 id="titulo-tablas">Datos en tablas</h2>
+          <div id="ofca-tablas" class="tablas"></div>
+        </section>
       </div>
     </section>`,
   };
@@ -280,7 +385,7 @@ function contacto() {
   return {
     titulo: 'Contacto',
     descripcion:
-      'Escribinos al Observatorio del Ciberdelito y encontrá orientación inicial si fuiste víctima de una estafa virtual o un ciberdelito.',
+      'Escribinos a OFCA y encontrá orientación inicial si fuiste víctima de una estafa virtual o un ciberdelito.',
     scripts: ['/js/contacto.js'],
     cuerpo: `
     <section class="seccion">
@@ -351,7 +456,7 @@ function privacidad() {
   return {
     titulo: 'Protección de datos personales',
     descripcion:
-      'Política de protección de datos personales del Observatorio Federal del Ciberdelito.',
+      'Política de protección de datos personales de OFCA, Observatorio Federal de Ciberdelincuencia Argentina.',
     cuerpo: `
     <section class="seccion">
       <div class="contenedor contenido-texto">
@@ -473,6 +578,8 @@ function render(pathname) {
       descripcion: def.descripcion,
       cuerpo: def.cuerpo,
       scripts: def.scripts,
+      modulos: def.modulos,
+      estilos: def.estilos,
       noindex: def.noindex,
     }),
   };
